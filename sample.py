@@ -26,9 +26,15 @@ import sys
 import urllib
 import csv
 
+#selenium
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.keys import Keys
+
 #Custom
 from category import categories
 from city import cities
+from config import isFirst
 
 # This client code can run on Python 2.x or 3.x.  Your imports can be
 # simpler if you only need one of those.
@@ -64,7 +70,13 @@ DEFAULT_LOCATION = 'San Francisco, CA'
 SEARCH_LIMIT = 50
 # OFFSET = 50
 FILE_PATH = 'data.csv'
-FIELD_NAME = ['Business Name', 'Category', 'About the Business', 'Website', 'Phone number', 'Address', 'Pictures', 'City', 'ZipCode']
+FILTERD_FILE_PATH = 'filterd_data.csv'
+FIELD_NAME = ['Business Name', 'Category', 'About the Business', 'Website', 'Phone number', 'Address', 'Pictures', 'Category Title', 'City', 'ZipCode']
+#selenium config
+options = Options()
+options.headless = True
+driver = webdriver.Chrome(options=options)
+options.page_load_strategy = 'normal'
 
 def request(host, path, api_key, url_params=None):
     """Given your API_KEY, send a GET request to the API.
@@ -139,7 +151,9 @@ def query_api(term, location):
         response = search(API_KEY, term, location, i)
 
         businesses = response.get('businesses')
-
+        total = response.get('total')
+        print(u'Total businesses for {0}-{1} in {2} found.'.format(i, i+50, total))
+        
         if not businesses:
             print(u'No businesses for {0} in {1} found.'.format(term, location))
             return
@@ -147,7 +161,52 @@ def query_api(term, location):
             business_id = businesses[j]['id']
             response = get_business(API_KEY, business_id)
 
-            end_data(FILE_PATH,response['name'],term, '', '', response['display_phone'],response['location']['display_address'],response['photos'],response['location']['city'],response['location']['zip_code'])
+            #selenium
+            link = phonenumber = detail = ''
+            driver.get(response['url'])
+            #website link
+            # links = driver.find_elements_by_class_name("css-ac8spe")
+            # for l in links:
+            #     try:
+            #         if l.find_element_by_xpath('..').get_attribute("class") == " css-1h1j0y3":
+            #             link = l.get_attribute("innerHTML")
+            #             break
+            #     except:
+            #         pass
+            # print(u'website link: {0}'.format(link))
+
+            #link & phone number
+            decriptionTags = driver.find_elements_by_class_name("css-aml4xx")
+            for p in decriptionTags:
+                try:
+                    if p.get_attribute("innerHTML") == "Phone number":
+                        phonenumber = p.find_element_by_xpath('..').find_elements_by_xpath(".//*")[1].get_attribute("innerHTML")
+                        break
+                    elif p.get_attribute("innerHTML") == "Business website":
+                        link = p.find_element_by_xpath('..').find_element_by_tag_name("a").get_attribute("innerHTML")
+                        
+                except:
+                    pass
+            # print(u'website link: {0}'.format(link))
+            # print(u'phone number: {0}'.format(phonenumber))
+            #find business detail
+            modalBtns = driver.find_elements_by_class_name("css-174jypu")
+            for k in modalBtns:
+                try:
+                    c = k.find_element_by_tag_name("span").get_attribute("innerHTML")
+                    # print(u'span innerHtml: {0}'.format(c))
+                    if c == 'Read more':
+                        k.click()
+                        details = driver.find_elements_by_class_name(
+                            "css-7tnmsu")
+                        detail = details[0].get_attribute("innerHTML")
+                        break
+                except:
+                    pass
+            #close tab
+            driver.find_element_by_tag_name('body').send_keys(Keys.COMMAND + 'W')
+
+            end_data(FILE_PATH,response['name'],term, detail, link, phonenumber,response['location']['display_address'],response['photos'], response['categories'], response['location']['city'],response['location']['zip_code'])
 
 
     # response = search(API_KEY, term, location, offset)
@@ -167,8 +226,16 @@ def query_api(term, location):
 
     # print(u'Result for business "{0}" found:'.format(business_id))
     # pprint.pprint(response, indent=2)
-def end_data(file_path, Name, Category, About, RedrLink, Phone, Address, Photos, City, ZipCode):
+def end_data(file_path, Name, Category, About, RedrLink, Phone, Address, Photos, CategoryTitle, City, ZipCode):
 
+    tmpTitle = tmpAddress = tmpPhotos = ''
+
+    for title in CategoryTitle:
+        tmpTitle += title['title'] + ','
+    for adds in Address:
+        tmpAddress += adds + ' '
+    for photo in Photos:
+        tmpPhotos += photo + ','
     with open(file_path, "a",encoding='utf-8', newline='') as csvfile:
         writer = csv.DictWriter(
             csvfile, fieldnames=FIELD_NAME )
@@ -179,8 +246,9 @@ def end_data(file_path, Name, Category, About, RedrLink, Phone, Address, Photos,
             "About the Business": About,
             "Website": RedrLink,
             "Phone number": Phone,
-            "Address": Address,
-            "Pictures": Photos,
+            "Address": tmpAddress,
+            "Pictures": tmpPhotos,
+            "Category Title": tmpTitle,
             "City": City,
             "ZipCode": ZipCode
         })
@@ -197,10 +265,12 @@ def main():
 
     input_values = parser.parse_args()
 
-    with open(FILE_PATH, "a",encoding='utf-8', newline='') as csvfile:
-        writer = csv.DictWriter(
-            csvfile, fieldnames=FIELD_NAME )
-        writer.writeheader()
+    # write a header for the first time
+    if isFirst == 'true':
+        with open(FILE_PATH, "a",encoding='utf-8', newline='') as csvfile:
+            writer = csv.DictWriter(
+                csvfile, fieldnames=FIELD_NAME )
+            writer.writeheader()
 
     for category in categories:
         for city in cities:
@@ -215,7 +285,18 @@ def main():
                         error.read(),
                     )
                 )
+    driver.quit()
+    #check duplicate
+    print(u'check duplicate and write in... {0}'.format(FILTERD_FILE_PATH))
+    with open(FILE_PATH, 'r') as in_file, open(FILTERD_FILE_PATH, 'w') as out_file:
+        seen = set()  # set for fast O(1) amortized lookup
+        for line in in_file:
+            if line in seen:
+                continue  # skip duplicate
 
+            seen.add(line)
+            out_file.write(line)
 
+# main entry
 if __name__ == '__main__':
     main()
