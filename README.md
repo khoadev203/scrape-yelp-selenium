@@ -1,4 +1,4 @@
-# Yelp Fusion API Python Code Sample
+# Yelp Fusion API Python Code
 
 ## Overview
 This program demonstrates the capability of the Yelp Fusion API
@@ -16,7 +16,10 @@ To install the dependencies, run:
 `pip install -r requirements.txt`.
 
 Run the code sample without specifying any arguments:
-`python sample.py`
+`python scrape.py`
 
 Run the code sample by specifying the optional arguments:
-`python sample.py --term="bars" --location="San Francisco, CA"`
+`python scrape.py --term="bars" --location="San Francisco, CA"`
+
+Check duplicate in csv file and filter:
+`python filter_csv.py`

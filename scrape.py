@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Yelp Fusion API code sample.
+Yelp Fusion API code.
 
 This program demonstrates the capability of the Yelp Fusion API
 by using the Search API to query for businesses by a search term and location,
@@ -14,7 +14,7 @@ This program requires the Python requests library, which you can install via:
 `pip install -r requirements.txt`.
 
 Sample usage of the program:
-`python sample.py --term="bars" --location="San Francisco, CA"`
+`python scrape.py --term="bars" --location="San Francisco, CA"`
 """
 from __future__ import print_function
 
@@ -25,14 +25,14 @@ import requests
 import sys
 import urllib
 import csv
-
+import time
 #selenium
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 
 #Custom
-from category import categories
+from category import categories1
 from city import cities
 from config import isFirst
 
@@ -55,7 +55,7 @@ except ImportError:
 # It now uses private keys to authenticate requests (API Key)
 # You can find it on
 # https://www.yelp.com/developers/v3/manage_app
-API_KEY= 'pK4L2RXmnPBobFELgcgOkzfTLY6MtJLsVr38y3rYrUVIA0udbDOtsXBHCQJF1hcBaWZtla2ymAGR3LlwOTzLZ_JlgCOZ-cjuEvh6pXZJN9iYqkGwbCXPl3RcdAc6YXYx'
+API_KEY= 'GFGXvLuZW2QErce9kv75J0X-u6c21vkEMt5Zqi8qhUSZr0KCsLm4aBPOSPPyFmjTLFC4w8dlCNBQDdI3c-s9c9y-BRThCynhZRkUpRRpo9kzuACSv8Lhge4kxt47YXYx'
 
 
 # API constants, you shouldn't have to change these.
@@ -75,8 +75,9 @@ FIELD_NAME = ['Business Name', 'Category', 'About the Business', 'Website', 'Pho
 #selenium config
 options = Options()
 options.headless = True
-driver = webdriver.Chrome(options=options)
 options.page_load_strategy = 'normal'
+driver = webdriver.Chrome(options=options)
+# driver.set_page_load_timeout(10000)
 
 def request(host, path, api_key, url_params=None):
     """Given your API_KEY, send a GET request to the API.
@@ -148,10 +149,9 @@ def query_api(term, location):
         location (str): The location of the business to query.
     """
     for i in range(0, 1000, 50):
-        response = search(API_KEY, term, location, i)
-
-        businesses = response.get('businesses')
-        total = response.get('total')
+        responses = search(API_KEY, term, location, i)
+        businesses = responses.get('businesses')
+        total = responses.get('total')
         print(u'Total businesses for {0}-{1} in {2} found.'.format(i, i+50, total))
         
         if not businesses:
@@ -160,72 +160,53 @@ def query_api(term, location):
         for j in range(0, len(businesses)):
             business_id = businesses[j]['id']
             response = get_business(API_KEY, business_id)
-
+            time.sleep(1)
             #selenium
             link = phonenumber = detail = ''
-            driver.get(response['url'])
-            #website link
-            # links = driver.find_elements_by_class_name("css-ac8spe")
-            # for l in links:
-            #     try:
-            #         if l.find_element_by_xpath('..').get_attribute("class") == " css-1h1j0y3":
-            #             link = l.get_attribute("innerHTML")
-            #             break
-            #     except:
-            #         pass
-            # print(u'website link: {0}'.format(link))
 
-            #link & phone number
-            decriptionTags = driver.find_elements_by_class_name("css-aml4xx")
-            for p in decriptionTags:
-                try:
-                    if p.get_attribute("innerHTML") == "Phone number":
-                        phonenumber = p.find_element_by_xpath('..').find_elements_by_xpath(".//*")[1].get_attribute("innerHTML")
-                        break
-                    elif p.get_attribute("innerHTML") == "Business website":
-                        link = p.find_element_by_xpath('..').find_element_by_tag_name("a").get_attribute("innerHTML")
-                        
-                except:
-                    pass
-            # print(u'website link: {0}'.format(link))
-            # print(u'phone number: {0}'.format(phonenumber))
-            #find business detail
-            modalBtns = driver.find_elements_by_class_name("css-174jypu")
-            for k in modalBtns:
-                try:
-                    c = k.find_element_by_tag_name("span").get_attribute("innerHTML")
-                    # print(u'span innerHtml: {0}'.format(c))
-                    if c == 'Read more':
-                        k.click()
-                        details = driver.find_elements_by_class_name(
-                            "css-7tnmsu")
-                        detail = details[0].get_attribute("innerHTML")
-                        break
-                except:
-                    pass
-            #close tab
-            driver.find_element_by_tag_name('body').send_keys(Keys.COMMAND + 'W')
+            try:
+                url = response['url']
+                driver.get(url)
 
-            end_data(FILE_PATH,response['name'],term, detail, link, phonenumber,response['location']['display_address'],response['photos'], response['categories'], response['location']['city'],response['location']['zip_code'])
+                #link & phone number
+                decriptionTags = driver.find_elements_by_class_name("css-aml4xx")
+                for p in decriptionTags:
+                    try:
+                        if p.get_attribute("innerHTML") == "Phone number":
+                            phonenumber = p.find_element_by_xpath('..').find_elements_by_xpath(".//*")[1].get_attribute("innerHTML")
+                            break
+                        elif p.get_attribute("innerHTML") == "Business website":
+                            link = p.find_element_by_xpath('..').find_element_by_tag_name("a").get_attribute("innerHTML")
+                            
+                    except:
+                        pass
+                # print(u'website link: {0}'.format(link))
+                # print(u'phone number: {0}'.format(phonenumber))
 
+                #find business detail
+                modalBtns = driver.find_elements_by_class_name("css-174jypu")
+                # print(u'modalBtns: {0}'.format(modalBtns))
+                for k in modalBtns:
+                    try:
+                        c = k.find_element_by_tag_name("span").get_attribute("innerHTML")
+                        # print(u'span innerHtml: {0}'.format(c))
+                        if c == 'Read more':
+                            k.click()
+                            details = driver.find_elements_by_class_name(
+                                "css-7tnmsu")
+                            detail = details[0].get_attribute("innerHTML")
+                            break
+                    except:
+                        pass
+                #close tab in unheadless mode
+                # driver.find_element_by_tag_name('body').send_keys(Keys.COMMAND + 'W')
 
-    # response = search(API_KEY, term, location, offset)
+                end_data(FILE_PATH,response['name'],term, detail, link, phonenumber,response['location']['display_address'],response['photos'], response['categories'], response['location']['city'],response['location']['zip_code'])
+            except:
+                print(u'error in response')
+                pass
 
-    # businesses = response.get('businesses')
-
-    # if not businesses:
-    #     print(u'No businesses for {0} in {1} found.'.format(term, location))
-    #     return
-
-    # business_id = businesses[0]['id']
-
-    # print(u'{0} businesses found, querying business info ' \
-    #     'for the top result "{1}" ...'.format(
-    #         len(businesses), business_id))
-    # response = get_business(API_KEY, business_id)
-
-    # print(u'Result for business "{0}" found:'.format(business_id))
-    # pprint.pprint(response, indent=2)
+#write in csv file
 def end_data(file_path, Name, Category, About, RedrLink, Phone, Address, Photos, CategoryTitle, City, ZipCode):
 
     tmpTitle = tmpAddress = tmpPhotos = ''
@@ -272,20 +253,35 @@ def main():
                 csvfile, fieldnames=FIELD_NAME )
             writer.writeheader()
 
-    for category in categories:
-        for city in cities:
+    # scrape all
+    # for category in categories1:
+    #     for city in cities:
 
-            try:
-                query_api(category, city)
-            except HTTPError as error:
-                sys.exit(
-                    'Encountered HTTP error {0} on {1}:\n {2}\nAbort program.'.format(
-                        error.code,
-                        error.url,
-                        error.read(),
-                    )
-                )
+    #         try:
+    #             query_api(category, city)
+    #         except HTTPError as error:
+    #             sys.exit(
+    #                 'Encountered HTTP error {0} on {1}:\n {2}\nAbort program.'.format(
+    #                     error.code,
+    #                     error.url,
+    #                     error.read(),
+    #                 )
+    #             )
+
+    # scrape from input
+    try:
+        query_api(input_values.term, input_values.location)
+    except HTTPError as error:
+        sys.exit(
+            'Encountered HTTP error {0} on {1}:\n {2}\nAbort program.'.format(
+                error.code,
+                error.url,
+                error.read(),
+            )
+        )
+    #close selenium
     driver.quit()
+
     #check duplicate
     print(u'check duplicate and write in... {0}'.format(FILTERD_FILE_PATH))
     with open(FILE_PATH, 'r') as in_file, open(FILTERD_FILE_PATH, 'w') as out_file:

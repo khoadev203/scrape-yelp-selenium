@@ -1,4 +1,4 @@
-cities = ['New York',
+cities = ['Irvine',
 'Las Vegas',
 'Columbus',
 'Portland',
@@ -6,8 +6,8 @@ cities = ['New York',
 'Santa Rosa',
 'Washington, DC',
 'Chicago',
-'Irvine',
 'San Diego',
 'San Francisco',
-'Boston'
+'Boston',
+'New York',
 ]
