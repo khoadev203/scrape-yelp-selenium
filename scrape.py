@@ -32,7 +32,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 
 #Custom
-from category import categories1
+from category import categories
 from city import cities
 from config import isFirst
 
@@ -66,9 +66,9 @@ BUSINESS_PATH = '/v3/businesses/'  # Business ID will come after slash.
 
 # Defaults for our simple example.
 DEFAULT_TERM = 'yoga'
-DEFAULT_LOCATION = 'San Francisco, CA'
+DEFAULT_LOCATION = 'Irvine'
 SEARCH_LIMIT = 50
-# OFFSET = 50
+OFFSET = 50
 FILE_PATH = 'data.csv'
 FILTERD_FILE_PATH = 'filterd_data.csv'
 FIELD_NAME = ['Business Name', 'Category', 'About the Business', 'Website', 'Phone number', 'Address', 'Pictures', 'Category Title', 'City', 'ZipCode']
@@ -107,7 +107,7 @@ def request(host, path, api_key, url_params=None):
     return response.json()
 
 
-def search(api_key, term, location, offset):
+def search(api_key, term, location, offset = 0):
     """Query the Search API by a search term and location.
 
     Args:
@@ -148,11 +148,13 @@ def query_api(term, location):
         term (str): The search term to query.
         location (str): The location of the business to query.
     """
-    for i in range(0, 1000, 50):
+    responses = search(API_KEY, term, location)
+    print(u'Searching businesses for {0} in {1}'.format(term,location))
+    total = responses.get('total')
+    for i in range(0, total, OFFSET):
         responses = search(API_KEY, term, location, i)
         businesses = responses.get('businesses')
-        total = responses.get('total')
-        print(u'Total businesses for {0}-{1} in {2} found.'.format(i, i+50, total))
+        print(u'Total businesses for {0}-{1} in {2} found.'.format(i, i+OFFSET, total))
         
         if not businesses:
             print(u'No businesses for {0} in {1} found.'.format(term, location))
@@ -160,7 +162,7 @@ def query_api(term, location):
         for j in range(0, len(businesses)):
             business_id = businesses[j]['id']
             response = get_business(API_KEY, business_id)
-            time.sleep(1)
+            # time.sleep(1)
             #selenium
             link = phonenumber = detail = ''
 
@@ -268,7 +270,7 @@ def main():
     #                 )
     #             )
 
-    # scrape from input
+    # scrape from input or default
     try:
         query_api(input_values.term, input_values.location)
     except HTTPError as error:

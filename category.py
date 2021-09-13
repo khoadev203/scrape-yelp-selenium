@@ -1,4 +1,5 @@
-categories = ['Active Life',
+categories = [
+'Active Life',
 'Fitness & Instruction',
 'Trainers',
 'Gyms',
@@ -41,8 +42,10 @@ categories = ['Active Life',
 'Tennis',
 'Psychics',
 'Golf Equipment',
-'Gymnastics']
-categories1 = ['active',
+'Gymnastics'
+]
+categories1 = [
+'active',
 'fitness',          #parents:active
 'healthtrainers',   #p:fitness
 'gyms',             #p:fitness
@@ -85,4 +88,5 @@ categories1 = ['active',
 'tennis',                   #active
 'psychics',             #psychic_astrology
 'golfequipment',        #sportgoods
-'gymnastics']           #active
+'gymnastics',           #active
+]            

@@ -1,3 +1,5 @@
+import csv
+
 def main():
     #check duplicate
     print(u'check duplicate from {0} and filter & write in {1}'.format('data.csv','filterd_data.csv'))
@@ -9,7 +11,7 @@ def main():
 
             seen.add(line)
             out_file.write(line)
-
+    print(u'done')
 # main entry
 if __name__ == '__main__':
     main()
