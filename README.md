@@ -29,4 +29,4 @@ Check duplicate in csv file and filter:
 
 ## Contact Me
 Skype: live:.cid.2c6d651287d6edc3
-Email: khoa-dev@hotmail.com
+Email: skigit99@outlook.com
